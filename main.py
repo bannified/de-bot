@@ -1,31 +1,19 @@
-import StringIO
 import json
 import logging
-import random
 import urllib
 import urllib2
 from secrets import TOKEN, WEBHOOK_URL, MAIN_ANDROID_ID
-
-# for sending images
-from PIL import Image
-import multipart
 
 # standard app engine imports
 from google.appengine.api import urlfetch
 from google.appengine.ext import ndb
 import webapp2
 
-#TOKEN = 'YOUR_BOT_TOKEN_HERE'
-
 BASE_URL = 'http://api.tofusms.com/devices/send/' + MAIN_ANDROID_ID
 
 JSON_HEADER = {'Content-Type': 'application/json;charset=utf-8',
                 "Authorization": "Token " + TOKEN}
 # ================================
-
-class EnableStatus(ndb.Model):
-    # key name: str(chat_id)
-    enabled = ndb.BooleanProperty(indexed=False, default=False)
 
 class User(ndb.Model):
     contact = ndb.StringProperty()
@@ -34,17 +22,6 @@ class User(ndb.Model):
 
 
 # ================================
-
-def setEnabled(chat_id, yes):
-    es = EnableStatus.get_or_insert(str(chat_id))
-    es.enabled = yes
-    es.put()
-
-def getEnabled(chat_id):
-    es = EnableStatus.get_by_id(str(chat_id))
-    if es:
-        return es.enabled
-    return False
 
 def make_payload(message, contact):
     payload = json.dumps({
@@ -57,9 +34,8 @@ def send_message(data):
     urlfetch.fetch(url=BASE_URL, payload = data, method = urlfetch.POST,
                     headers = JSON_HEADER)
 
-def get_user_by_contact(contact): #get user based on uid, if user doesn't exist, a new user instance is created with uid and saved.
+def get_user_by_contact(contact):
     q = User.query(User.contact == str(contact)).fetch()
-    #q.filter("contact =", contact)
     if len(q) != 0:
         user = q[0]
         return user
@@ -79,14 +55,8 @@ class ReceiveHandler(webapp2.RequestHandler):
     def get(self):
         self.response.write("Receive page")
     def post(self):
-        #headers = json.loads(self.request.headers)
-        #data = json.loads(self.request.body) #deserializing json in POST request body
-        #print(headers)
-        #print(data)
-        #logging.debug(self.request.headers)
         data = json.loads(self.request.body) #deserializing json in POST request body
         logging.debug(self.request.body) # prints debug message
-
 
         msg = data["message"]
         contact = data["contact"]
@@ -220,21 +190,7 @@ class ReceiveHandler(webapp2.RequestHandler):
                 new_msg += "You are currently in demo2 mode\n"
                 new_msg += "Type 'next' to go to the next step of the demo."
             send_message(make_payload(new_msg, contact))
-
-
-
-
-        # if msg == "I can":
-        #     logging.debug("sending do it!")
-        #     new_msg = "do it!"
-        # elif msg == "Will we win this hackathon?":
-        #     new_msg = "Of course!"
-        #
-
         self.response.write(self.request)
-
-
-
 
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
